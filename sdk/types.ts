@@ -32,6 +32,7 @@ export interface SnapshotEventPayload {
 }
 
 export interface ClickEventPayload {
+  selector?: string
   x: number
   y: number
   elementTag: string
@@ -48,6 +49,7 @@ export interface ScrollEventPayload {
 }
 
 export interface InputEventPayload {
+  selector?: string
   elementTag: string
   elementId?: string
   classes?: string[]

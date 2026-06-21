@@ -1,4 +1,4 @@
-import { SnapshotEvent, SnapshotEventPayload } from './types'
+import type { SnapshotEvent, SnapshotEventPayload } from './types.js'
 
 const PASSWORD_MASK = '***'
 const PRIVATE_MASK = '<div data-private="true">[REDACTED]</div>'

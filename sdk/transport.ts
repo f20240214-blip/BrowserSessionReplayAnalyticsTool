@@ -1,4 +1,4 @@
-import { SessionEvent } from './types'
+import type { SessionEvent } from './types.js'
 
 export type OverflowPolicy = 'drop-oldest' | 'drop-newest'
 

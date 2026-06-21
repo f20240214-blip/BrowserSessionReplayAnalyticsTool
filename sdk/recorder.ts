@@ -1,16 +1,14 @@
-import {
-  RecorderConfig,
-  mergeConfig,
-} from './config'
-import { Transport } from './transport'
-import { captureSnapshot } from './snapshot'
-import { startMutationTracking } from './mutations'
-import { getElementSelector } from './selectors'
+import type { RecorderConfig } from './config.js'
+import { mergeConfig } from './config.js'
+import { Transport } from './transport.js'
+import { captureSnapshot } from './snapshot.js'
+import { startMutationTracking } from './mutations.js'
+import { getElementSelector } from './selectors.js'
 import {
   generateSessionId,
   throttle,
   debugLog,
-} from './utils'
+} from './utils.js'
 import type {
   SessionEvent,
   ClickEvent,
@@ -19,7 +17,7 @@ import type {
   NavigationEvent,
   SnapshotEvent,
   MutationEvent,
-} from './types'
+} from './types.js'
 
 /**
  * SessionRecorder orchestrates recording: snapshots, mutation tracking,
@@ -145,19 +143,28 @@ export class SessionRecorder {
 
       const selector = getElementSelector(target)
 
+      const clickPayload = {
+        selector,
+        x: ev.clientX,
+        y: ev.clientY,
+        elementTag: target.tagName.toLowerCase(),
+        textContent: target.textContent ?? undefined,
+      } as ClickEvent['payload']
+
+      if (target.id) {
+        clickPayload.elementId = target.id
+      }
+
+      const classes = target.className ? target.className.split(/\s+/).filter(Boolean) : []
+      if (classes.length > 0) {
+        clickPayload.classes = classes
+      }
+
       const event: ClickEvent = {
         sessionId: this.sessionId!,
         timestamp: new Date().toISOString(),
         type: 'click',
-        payload: {
-          selector,
-          x: ev.clientX,
-          y: ev.clientY,
-          elementTag: target.tagName.toLowerCase(),
-          elementId: target.id || undefined,
-          classes: target.className ? target.className.split(/\s+/).filter(Boolean) : undefined,
-          textContent: target.textContent ?? undefined,
-        },
+        payload: clickPayload,
       }
 
       this.transport!.enqueue(event as SessionEvent)
@@ -225,20 +232,29 @@ export class SessionRecorder {
 
       const selector = getElementSelector(target as HTMLElement)
 
+      const inputPayload = {
+        selector,
+        elementTag,
+        value: value ?? '',
+        inputType: (target instanceof HTMLInputElement && target.type) || 'input',
+      } as InputEvent['payload']
+
+      if ((target as HTMLElement).id) {
+        inputPayload.elementId = (target as HTMLElement).id
+      }
+
+      const inputClasses = (target as HTMLElement).className
+        ? (target as HTMLElement).className.split(/\s+/).filter(Boolean)
+        : []
+      if (inputClasses.length > 0) {
+        inputPayload.classes = inputClasses
+      }
+
       const event: InputEvent = {
         sessionId: this.sessionId!,
         timestamp: new Date().toISOString(),
         type: 'input',
-        payload: {
-          selector,
-          elementTag,
-          elementId: (target as HTMLElement).id || undefined,
-          classes: (target as HTMLElement).className
-            ? (target as HTMLElement).className.split(/\s+/).filter(Boolean)
-            : undefined,
-          value: value ?? '',
-          inputType: (target instanceof HTMLInputElement && target.type) || 'input',
-        },
+        payload: inputPayload,
       }
 
       this.transport!.enqueue(event as SessionEvent)

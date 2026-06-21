@@ -7,10 +7,10 @@
  * selectors, utils) remain private and are not exported here.
  */
 
-export { SessionRecorder } from './recorder'
+export { SessionRecorder } from './recorder.js'
 
-export type { RecorderConfig } from './config'
-export { DEFAULT_CONFIG } from './config'
+export type { RecorderConfig } from './config.js'
+export { DEFAULT_CONFIG } from './config.js'
 
 // High-level event types for consumers who want to type events or inspect payloads
 export type {
@@ -21,4 +21,4 @@ export type {
   InputEvent,
   NavigationEvent,
   MutationEvent,
-} from './types'
+} from './types.js'

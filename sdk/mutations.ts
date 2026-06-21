@@ -1,5 +1,5 @@
-import { MutationEvent, MutationEventPayload } from './types'
-import { getElementSelector } from './selectors'
+import type { MutationEvent, MutationEventPayload } from './types.js'
+import { getElementSelector } from './selectors.js'
 
 /**
  * startMutationTracking observes DOM changes after the initial snapshot and
@@ -135,9 +135,12 @@ function createAttributeMutation(sessionId: string, record: MutationRecord): Mut
   const payload: MutationEventPayload = {
     mutationType: 'attributes',
     targetSelector: selector,
-    attributeName: record.attributeName ?? undefined,
     oldValue: record.oldValue,
     newValue: target.getAttribute(record.attributeName ?? ''),
+  }
+
+  if (record.attributeName) {
+    payload.attributeName = record.attributeName
   }
 
   return {
@@ -194,8 +197,14 @@ function createChildListMutations(sessionId: string, record: MutationRecord): Mu
   const payload: MutationEventPayload = {
     mutationType: 'childList',
     targetSelector: selector,
-    addedNodes: addedNodeSelectors.length > 0 ? addedNodeSelectors : undefined,
-    removedNodes: removedNodeSelectors.length > 0 ? removedNodeSelectors : undefined,
+  }
+
+  if (addedNodeSelectors.length > 0) {
+    payload.addedNodes = addedNodeSelectors
+  }
+
+  if (removedNodeSelectors.length > 0) {
+    payload.removedNodes = removedNodeSelectors
   }
 
   return [

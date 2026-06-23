@@ -74,9 +74,14 @@ export class Transport {
     enqueue(event) {
         if (this.queue.length < this.maxQueueSize) {
             this.queue.push(event);
+            this.log('Event queued:', event.type, event.timestamp);
+            this.log('Queue size:', this.queue.length);
+            console.log("QUEUED EVENT:", event.type);
             return;
         }
         this.applyOverflowPolicy(event);
+        this.log('Event queued after overflow policy:', event.type, event.timestamp);
+        this.log('Queue size:', this.queue.length);
     }
     /**
      * Returns the current number of queued events. Useful for diagnostics.
@@ -110,7 +115,7 @@ export class Transport {
             return;
         }
         this.flushTimerId = window.setInterval(() => {
-            this.flushQueuedEvents();
+            this.flushQueuedEvents('timer');
         }, this.flushIntervalMs);
     }
     stopFlushTimer() {
@@ -119,14 +124,17 @@ export class Transport {
             this.flushTimerId = null;
         }
     }
-    flushQueuedEvents() {
+    flushQueuedEvents(reason = 'manual') {
         if (!this.isSocketOpen()) {
             return;
         }
         if (this.queue.length === 0) {
             return;
         }
+        const count = this.queue.length;
+        this.log(`Flushing ${count} event(s) due to ${reason}.`);
         const batch = this.queue.splice(0, this.queue.length);
+        this.logEventBatch(batch);
         this.sendBatch(batch);
     }
     sendBatch(events) {
@@ -143,11 +151,26 @@ export class Transport {
             this.queue.unshift(...events);
         }
     }
+    logEventBatch(events) {
+        if (!this.debug) {
+            return;
+        }
+        // eslint-disable-next-line no-console
+        if (typeof console.groupCollapsed === 'function' && typeof console.table === 'function') {
+            console.groupCollapsed('[SessionReplaySDK] EVENT BATCH');
+            console.table(events.map((event) => ({ type: event.type, timestamp: event.timestamp, payload: event.payload })));
+            console.groupEnd();
+        }
+        else {
+            // eslint-disable-next-line no-console
+            console.debug('[SessionReplaySDK] EVENT BATCH', events);
+        }
+    }
     handleSocketOpen = () => {
         this.log('WebSocket connected.');
         this.currentBackoffMs = this.reconnectBaseDelayMs;
         this.clearReconnectTimer();
-        this.flushQueuedEvents();
+        this.flushQueuedEvents('manual');
     };
     handleSocketMessage = (event) => {
         this.log('Received WebSocket message:', event.data);
@@ -205,7 +228,7 @@ export class Transport {
             return;
         }
         // eslint-disable-next-line no-console
-        console.debug(`[Transport] ${message}`, ...args);
+        console.debug('[SessionReplaySDK]', message, ...args);
     }
 }
 //# sourceMappingURL=transport.js.map

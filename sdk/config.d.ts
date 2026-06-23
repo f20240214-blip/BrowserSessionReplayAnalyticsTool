@@ -22,7 +22,7 @@ export interface RecorderConfig {
     maxQueueSize?: number;
     /**
      * debug enables verbose logging to help diagnose recorder behavior during development.
-     * Default: false.
+     * Default: true.
      */
     debug?: boolean;
     /**

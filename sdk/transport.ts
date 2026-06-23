@@ -100,6 +100,7 @@ export class Transport {
       this.queue.push(event)
       this.log('Event queued:', event.type, event.timestamp)
       this.log('Queue size:', this.queue.length)
+      console.log("QUEUED EVENT:", event.type);
       return
     }
 

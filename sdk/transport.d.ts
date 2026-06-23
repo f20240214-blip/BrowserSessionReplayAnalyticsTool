@@ -58,6 +58,7 @@ export declare class Transport {
     private stopFlushTimer;
     private flushQueuedEvents;
     private sendBatch;
+    private logEventBatch;
     private handleSocketOpen;
     private handleSocketMessage;
     private handleSocketError;

@@ -5,7 +5,7 @@
 export const DEFAULT_CONFIG = {
     flushInterval: 500,
     maxQueueSize: 10000,
-    debug: false,
+    debug: true,
     reconnectAttempts: 10,
     reconnectBaseDelay: 1000,
 };

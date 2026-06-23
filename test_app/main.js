@@ -3,6 +3,7 @@ const recorder = new SessionRecorder({
     endpoint: "ws://localhost:3001",
     debug: true
 });
+window.recorder = recorder;
 recorder.start();
 console.log("Recorder started:", recorder.getSessionId());
 const modalButton = document.getElementById("modal-btn");

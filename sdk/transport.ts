@@ -172,6 +172,11 @@ export class Transport {
     const batch = this.queue.splice(0, this.queue.length)
     this.logEventBatch(batch)
     this.sendBatch(batch)
+    console.log(
+  "FLUSHING",
+  this.queue.length,
+  "events"
+);
   }
 
   private sendBatch(events: SessionEvent[]): void {

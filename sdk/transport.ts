@@ -98,10 +98,14 @@ export class Transport {
   public enqueue(event: SessionEvent): void {
     if (this.queue.length < this.maxQueueSize) {
       this.queue.push(event)
+      this.log('Event queued:', event.type, event.timestamp)
+      this.log('Queue size:', this.queue.length)
       return
     }
 
     this.applyOverflowPolicy(event)
+    this.log('Event queued after overflow policy:', event.type, event.timestamp)
+    this.log('Queue size:', this.queue.length)
   }
 
   /**
@@ -141,7 +145,7 @@ export class Transport {
     }
 
     this.flushTimerId = window.setInterval(() => {
-      this.flushQueuedEvents()
+      this.flushQueuedEvents('timer')
     }, this.flushIntervalMs)
   }
 
@@ -152,7 +156,7 @@ export class Transport {
     }
   }
 
-  private flushQueuedEvents(): void {
+  private flushQueuedEvents(reason: 'timer' | 'unload' | 'manual' = 'manual'): void {
     if (!this.isSocketOpen()) {
       return
     }
@@ -161,7 +165,11 @@ export class Transport {
       return
     }
 
+    const count = this.queue.length
+    this.log(`Flushing ${count} event(s) due to ${reason}.`)
+
     const batch = this.queue.splice(0, this.queue.length)
+    this.logEventBatch(batch)
     this.sendBatch(batch)
   }
 
@@ -180,11 +188,27 @@ export class Transport {
     }
   }
 
+  private logEventBatch(events: SessionEvent[]): void {
+    if (!this.debug) {
+      return
+    }
+
+    // eslint-disable-next-line no-console
+    if (typeof console.groupCollapsed === 'function' && typeof console.table === 'function') {
+      console.groupCollapsed('[SessionReplaySDK] EVENT BATCH')
+      console.table(events.map((event) => ({ type: event.type, timestamp: event.timestamp, payload: event.payload })))
+      console.groupEnd()
+    } else {
+      // eslint-disable-next-line no-console
+      console.debug('[SessionReplaySDK] EVENT BATCH', events)
+    }
+  }
+
   private handleSocketOpen = (): void => {
     this.log('WebSocket connected.')
     this.currentBackoffMs = this.reconnectBaseDelayMs
     this.clearReconnectTimer()
-    this.flushQueuedEvents()
+    this.flushQueuedEvents('manual')
   }
 
   private handleSocketMessage = (event: MessageEvent): void => {
@@ -259,6 +283,6 @@ export class Transport {
     }
 
     // eslint-disable-next-line no-console
-    console.debug(`[Transport] ${message}`, ...args)
+    console.debug('[SessionReplaySDK]', message, ...args)
   }
 }

@@ -51,7 +51,7 @@ export interface RecorderConfig {
 export const DEFAULT_CONFIG: Required<Omit<RecorderConfig, 'endpoint'>> = {
   flushInterval: 500,
   maxQueueSize: 10000,
-  debug: false,
+  debug: true,
   reconnectAttempts: 10,
   reconnectBaseDelay: 1000,
 }

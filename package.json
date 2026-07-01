@@ -2,5 +2,8 @@
   "devDependencies": {
     "typescript": "^6.0.3"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "mongoose": "^9.7.3"
+  }
 }

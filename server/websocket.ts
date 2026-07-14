@@ -1,5 +1,10 @@
 import { WebSocketServer } from 'ws'
+import type { EventBatch, ProcessingResult } from './types.js'
 import type { SessionEvent } from '../sdk/types.js'
+import type { IncomingMessage } from 'http'
+import type { WebSocket, Data as WebSocketData } from 'ws'
+
+let activeWebSocketServer: WebSocketServer | null = null
 
 /**
  * createWebSocketServer
@@ -10,7 +15,7 @@ import type { SessionEvent } from '../sdk/types.js'
  * ingestion surface remains lightweight and easy to test.
  *
  * The implementation attempts to dynamically load a `processEventBatch`
- * function from `./processor.js` at runtime. If that module is not available
+ * function from `./services/eventprocessor.js` at runtime. If that module is not available
  * the server will still accept connections but will log a warning instead of
  * forwarding events. This keeps the server resilient during development.
  */
@@ -20,8 +25,8 @@ export function createWebSocketServer(port: number) {
 
   // Lazy-loaded processing function. Loaded on demand to avoid hard runtime
   // dependency on the processor module. If the consumer provides a processor
-  // at runtime (./processor.js exporting processEventBatch), it will be used.
-  let processFn: ((events: SessionEvent[]) => Promise<void>) | null = null
+  // at runtime (./services/eventprocessor.js exporting processEventBatch), it will be used.
+  let processFn: ((events: EventBatch) => Promise<ProcessingResult>) | null = null
   let triedLoad = false
 
   async function loadProcessor(): Promise<void> {
@@ -45,15 +50,15 @@ export function createWebSocketServer(port: number) {
     }
   }
 
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     const clientAddr = req.socket.remoteAddress ?? 'unknown'
     console.log(`[SessionReplayServer] client connected: ${clientAddr}`)
 
-    ws.on('message', async (data) => {
+    ws.on('message', async (data: WebSocketData) => {
       // Messages expected to be JSON arrays of SessionEvent objects.
       let parsed: unknown
       try {
-        const text = typeof data === 'string' ? data : data.toString()
+        const text = typeof data === 'string' ? data : String(data)
         parsed = JSON.parse(text)
       } catch (err) {
         console.warn('[SessionReplayServer] received malformed JSON; ignoring message', err)
@@ -80,7 +85,8 @@ export function createWebSocketServer(port: number) {
       }
 
       try {
-        await processFn(events)
+        const result = await processFn(events)
+        console.log('[SessionReplayServer] processed event batch result', result)
       } catch (err) {
         console.error('[SessionReplayServer] error processing event batch', err)
       }
@@ -90,12 +96,49 @@ export function createWebSocketServer(port: number) {
       console.log(`[SessionReplayServer] client disconnected: ${clientAddr}`)
     })
 
-    ws.on('error', (err) => {
+    ws.on('error', (err: Error) => {
       console.error('[SessionReplayServer] websocket error', err)
     })
   })
 
+  activeWebSocketServer = wss
   return wss
+}
+
+/**
+ * startWebSocketServer begins listening on a port and tracks the active server
+ * instance so it can be cleanly stopped during graceful shutdown.
+ */
+export function startWebSocketServer(port: number): WebSocketServer {
+  if (activeWebSocketServer) {
+    return activeWebSocketServer
+  }
+
+  return createWebSocketServer(port)
+}
+
+/**
+ * stopWebSocketServer stops the active WebSocket server if it exists.
+ *
+ * This is used during graceful shutdown to stop accepting new connections
+ * without performing any business logic or message handling.
+ */
+export async function stopWebSocketServer(): Promise<void> {
+  if (!activeWebSocketServer) {
+    return
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    activeWebSocketServer!.close((err?: Error | null) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    })
+  })
+
+  activeWebSocketServer = null
 }
 
 /**

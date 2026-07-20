@@ -1,16 +1,37 @@
 import { connectMongoDB, disconnectMongoDB } from './mongodb.js'
 import { startWebSocketServer, stopWebSocketServer } from './websocket.js'
+import 'dotenv/config'
+
+interface AppConfig {
+  port: number
+  mongoUri: string
+}
 
 /**
- * Application configuration is loaded from environment variables.
- * These defaults are intended for local development only and should be
- * overridden through environment configuration in production.
+ * Load runtime configuration separately from startup so bootstrap() only
+ * orchestrates infrastructure initialization and remains easy to reason about.
  */
-const DEFAULT_PORT = 8080
-const DEFAULT_MONGODB_URI = 'mongodb://localhost:27017/session-replay'
+function getConfig(): AppConfig {
+  const rawPort = process.env.PORT ?? '8080'
+  const parsedPort = Number(rawPort)
 
-const PORT = Number(process.env.PORT ?? DEFAULT_PORT)
-const MONGODB_URI = process.env.MONGODB_URI ?? DEFAULT_MONGODB_URI
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+    throw new Error(
+      `Invalid PORT value "${rawPort}". Expected an integer between 1 and 65535.`
+    )
+  }
+
+  const mongoUri = process.env.MONGODB_URI?.trim()
+
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI environment variable is missing or empty.')
+  }
+
+  return {
+    port: parsedPort,
+    mongoUri,
+  }
+}
 
 let isShuttingDown = false
 
@@ -49,14 +70,16 @@ async function shutdown(): Promise<void> {
  * networking components so the ingestion server is ready to accept traffic.
  */
 async function bootstrap(): Promise<void> {
+  const config = getConfig()
+
   console.log('[SessionReplayServer] Starting...')
 
   try {
-    await connectMongoDB(MONGODB_URI)
+    await connectMongoDB(config.mongoUri)
     console.log('[SessionReplayServer] MongoDB connected.')
 
-    startWebSocketServer(PORT)
-    console.log(`[SessionReplayServer] WebSocket server listening on port ${PORT}.`)
+    startWebSocketServer(config.port)
+    console.log(`[SessionReplayServer] WebSocket server listening on port ${config.port}.`)
 
     console.log('[SessionReplayServer] Ready to receive browser session events.')
   } catch (error) {

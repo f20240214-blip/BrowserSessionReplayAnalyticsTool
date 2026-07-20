@@ -1,0 +1,156 @@
+import Event from '../models/Event.js';
+import Session from '../models/Session.js';
+/**
+ * validateBatch checks the incoming batch before any persistence work begins.
+ *
+ * Validation is intentionally separated from persistence so the business logic
+ * can reject malformed input clearly before attempting MongoDB operations.
+ */
+function validateBatch(batch) {
+    if (!Array.isArray(batch)) {
+        return {
+            valid: false,
+            reason: 'Payload must be an array of SessionEvent objects.',
+        };
+    }
+    if (batch.length === 0) {
+        return {
+            valid: false,
+            reason: 'Event batch is empty.',
+        };
+    }
+    let firstSessionId;
+    for (const event of batch) {
+        if (!event || typeof event !== 'object' || Array.isArray(event)) {
+            return {
+                valid: false,
+                reason: 'Malformed SessionEvent.',
+            };
+        }
+        const typedEvent = event;
+        if (typeof typedEvent.sessionId !== 'string' || typedEvent.sessionId.length === 0) {
+            return {
+                valid: false,
+                reason: 'Event missing sessionId.',
+            };
+        }
+        if (typedEvent.timestamp === undefined || typedEvent.timestamp === null) {
+            return {
+                valid: false,
+                reason: 'Event missing timestamp.',
+            };
+        }
+        if (typeof typedEvent.type !== 'string' || typedEvent.type.length === 0) {
+            return {
+                valid: false,
+                reason: 'Event missing type.',
+            };
+        }
+        if (!Object.prototype.hasOwnProperty.call(typedEvent, 'payload')) {
+            return {
+                valid: false,
+                reason: 'Event missing payload.',
+            };
+        }
+        if (firstSessionId === undefined) {
+            firstSessionId = typedEvent.sessionId;
+        }
+        else if (typedEvent.sessionId !== firstSessionId) {
+            return {
+                valid: false,
+                reason: 'Multiple session IDs detected in a single batch.',
+            };
+        }
+    }
+    return {
+        valid: true,
+    };
+}
+/**
+ * processEventBatch coordinates validation, session lifecycle updates, and bulk
+ * event persistence for an incoming batch.
+ *
+ * This file is the business logic layer of the ingestion server because it
+ * decides whether a batch is acceptable, how session metadata evolves, and how
+ * events are persisted efficiently without directly defining schemas.
+ */
+export async function processEventBatch(batch) {
+    const startedAt = Date.now();
+    const metadata = {
+        receivedAt: new Date(startedAt),
+        batchSize: batch.length,
+        processingTime: 0,
+        databaseLatency: 0,
+    };
+    const processingContext = {
+        batch,
+        metadata,
+    };
+    void processingContext;
+    const validation = validateBatch(batch);
+    if (!validation.valid) {
+        throw new Error(validation.reason);
+    }
+    const firstEvent = batch[0];
+    const lastEvent = batch[batch.length - 1];
+    const sessionId = firstEvent.sessionId;
+    const startTime = Number(firstEvent.timestamp);
+    const endTime = Number(lastEvent.timestamp);
+    let sessionCreated = false;
+    try {
+        const sessionLookupStartedAt = Date.now();
+        let session = await Session.findOne({ sessionId });
+        metadata.databaseLatency += Date.now() - sessionLookupStartedAt;
+        if (!session) {
+            /**
+             * A new Session document is created when the batch belongs to a session
+             * that has not been seen before. The initial timeline values are derived
+             * from the first and last events in the batch.
+             */
+            const sessionCreateStartedAt = Date.now();
+            session = new Session({
+                sessionId,
+                startTime,
+                endTime,
+                duration: endTime - startTime,
+                eventCount: batch.length,
+            });
+            await session.save();
+            metadata.databaseLatency += Date.now() - sessionCreateStartedAt;
+            sessionCreated = true;
+        }
+        else {
+            /**
+             * Existing sessions are updated in place to reflect the latest replay
+             * activity. This keeps session summaries current without creating duplicate
+             * session records.
+             */
+            const sessionUpdateStartedAt = Date.now();
+            session.endTime = Math.max(session.endTime, endTime);
+            session.duration = session.endTime - session.startTime;
+            session.eventCount += batch.length;
+            await session.save();
+            metadata.databaseLatency += Date.now() - sessionUpdateStartedAt;
+        }
+        /**
+         * Bulk insertion is used here because it is the most efficient way to store
+         * a batch of events from the browser SDK. The incoming events are persisted
+         * as-is, and each event is written in a single database operation.
+         */
+        const insertStartedAt = Date.now();
+        await Event.insertMany(batch);
+        metadata.databaseLatency += Date.now() - insertStartedAt;
+    }
+    catch (error) {
+        console.error('[SessionReplayServer] Failed to process event batch.', error);
+        throw new Error('Failed to process event batch.');
+    }
+    metadata.processingTime = Date.now() - startedAt;
+    return {
+        processedEvents: batch.length,
+        rejectedEvents: 0,
+        sessionCreated,
+        processingTime: metadata.processingTime,
+    };
+}
+//# sourceMappingURL=eventprocessor.js.map

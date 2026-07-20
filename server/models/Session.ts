@@ -8,8 +8,8 @@ import mongoose, { Schema } from 'mongoose'
  */
 export interface Session {
   sessionId: string
-  startTime: number
-  endTime: number
+  startTime: Date
+  endTime: Date
   duration: number
   eventCount: number
   url?: string
@@ -31,11 +31,11 @@ const SessionSchema = new Schema<SessionDocument>(
       unique: true,
     },
     startTime: {
-      type: Number,
+      type: Date,
       required: true,
     },
     endTime: {
-      type: Number,
+      type: Date,
       required: true,
     },
     duration: {

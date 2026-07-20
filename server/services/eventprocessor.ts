@@ -122,8 +122,9 @@ export async function processEventBatch(batch: EventBatch): Promise<ProcessingRe
   const firstEvent = batch[0]!
   const lastEvent = batch[batch.length - 1]!
   const sessionId = firstEvent.sessionId
-  const startTime = Number(firstEvent.timestamp)
-  const endTime = Number(lastEvent.timestamp)
+  const startTime = new Date(firstEvent.timestamp)
+  const endTime = new Date(lastEvent.timestamp)
+  const duration = endTime.getTime() - startTime.getTime()
   let sessionCreated = false
 
   try {
@@ -138,13 +139,22 @@ export async function processEventBatch(batch: EventBatch): Promise<ProcessingRe
        * from the first and last events in the batch.
        */
       const sessionCreateStartedAt = Date.now()
-      session = new Session({
+      const sessionData: {
+        sessionId: string
+        startTime: Date
+        endTime: Date
+        duration: number
+        eventCount: number
+      } = {
         sessionId,
         startTime,
         endTime,
-        duration: endTime - startTime,
+        duration,
         eventCount: batch.length,
-      })
+      }
+
+      session = new Session(sessionData)
+      console.log('[DEBUG] Creating session:', sessionData)
       await session.save()
       metadata.databaseLatency += Date.now() - sessionCreateStartedAt
       sessionCreated = true
@@ -155,8 +165,10 @@ export async function processEventBatch(batch: EventBatch): Promise<ProcessingRe
        * session records.
        */
       const sessionUpdateStartedAt = Date.now()
-      session.endTime = Math.max(session.endTime, endTime)
-      session.duration = session.endTime - session.startTime
+      if (endTime.getTime() > session.endTime.getTime()) {
+        session.endTime = endTime
+      }
+      session.duration = session.endTime.getTime() - session.startTime.getTime()
       session.eventCount += batch.length
       await session.save()
       metadata.databaseLatency += Date.now() - sessionUpdateStartedAt

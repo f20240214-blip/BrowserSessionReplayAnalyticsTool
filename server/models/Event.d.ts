@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
  */
 export interface Event {
     sessionId: string;
-    timestamp: number;
+    timestamp: Date;
     type: string;
     payload: unknown;
 }

@@ -14,7 +14,7 @@ const EventSchema = new Schema({
         index: true,
     },
     timestamp: {
-        type: Number,
+        type: Date,
         required: true,
         index: true,
     },

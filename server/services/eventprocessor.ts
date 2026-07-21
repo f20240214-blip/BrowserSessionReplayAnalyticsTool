@@ -180,7 +180,17 @@ export async function processEventBatch(batch: EventBatch): Promise<ProcessingRe
      * as-is, and each event is written in a single database operation.
      */
     const insertStartedAt = Date.now()
-    await Event.insertMany(batch as unknown as Array<Record<string, unknown>>)
+    const eventDocuments = batch.map((event) => ({
+      sessionId: event.sessionId,
+      timestamp: new Date(event.timestamp),
+      type: event.type,
+      payload: event.payload,
+    }))
+
+    console.log('[DEBUG] Events to persist:', eventDocuments.length)
+    console.log('[DEBUG] First persisted event:', eventDocuments[0])
+    await Event.insertMany(eventDocuments)
+    console.log('[DEBUG] Event insertion completed successfully.')
     metadata.databaseLatency += Date.now() - insertStartedAt
   } catch (error) {
     console.error('[SessionReplayServer] Failed to process event batch.', error)

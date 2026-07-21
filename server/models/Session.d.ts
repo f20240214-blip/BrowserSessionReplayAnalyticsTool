@@ -7,8 +7,8 @@ import mongoose from 'mongoose';
  */
 export interface Session {
     sessionId: string;
-    startTime: number;
-    endTime: number;
+    startTime: Date;
+    endTime: Date;
     duration: number;
     eventCount: number;
     url?: string;

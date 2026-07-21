@@ -7,11 +7,11 @@ const SessionSchema = new Schema({
         unique: true,
     },
     startTime: {
-        type: Number,
+        type: Date,
         required: true,
     },
     endTime: {
-        type: Number,
+        type: Date,
         required: true,
     },
     duration: {

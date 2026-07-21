@@ -9,7 +9,7 @@ import mongoose, { Schema } from 'mongoose'
  */
 export interface Event {
   sessionId: string
-  timestamp: number
+  timestamp: Date
   type: string
   payload: unknown
 }
@@ -39,7 +39,7 @@ const EventSchema = new Schema<EventDocument>(
       index: true,
     },
     timestamp: {
-      type: Number,
+      type: Date,
       required: true,
       index: true,
     },

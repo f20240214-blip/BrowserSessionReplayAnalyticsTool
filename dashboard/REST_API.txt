@@ -1,0 +1,11 @@
+What is REST API??
+REST (Representational State Transfer) is an architectural style
+where resources are exposed through URLs and manipulated using HTTP methods.
+
+In context of this project.
+Sessions and Events are resources. DB stores them. dashboard doesn't 
+directly connect with DB instead it connects with middle man the API
+
+React components don't directly connect with DB bcoz doing that
+would mean exposing DB credentials abd arbitrary requests from browser
+gets allowed -> huge security risk

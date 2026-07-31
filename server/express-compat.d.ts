@@ -2,6 +2,7 @@ declare module 'express' {
   export interface Request {
     originalUrl: string
     method: string
+    params: Record<string, string | undefined>
   }
 
   export interface Response {
@@ -19,7 +20,8 @@ declare module 'express' {
   }
 
   export interface RouterInterface {
-    use(...args: unknown[]): unknown
+    get(path: string, handler: (req: Request, res: Response) => unknown): this
+    use(...args: unknown[]): this
   }
 
   export function Router(): RouterInterface

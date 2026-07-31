@@ -1,5 +1,6 @@
 import { type Request, type Response } from 'express'
 import Event from '../models/Event.js'
+import Session from '../models/Session.js'
 
 /**
  * Controllers are the application layer in a layered Express architecture.
@@ -24,9 +25,10 @@ import Event from '../models/Event.js'
 /**
  * Handle GET /sessions/:sessionId/events.
  *
- * This controller validates the route parameter, asks the Event model to load
- * every event for the requested session, sorts them chronologically, and then
- * converts the Mongoose results into the appropriate HTTP response.
+ * This controller validates the route parameter, confirms the parent session
+ * exists in the Session model, then asks the Event model to load every event
+ * for the requested session. The results are sorted chronologically so the
+ * replay engine receives the same order the browser recorded them.
  */
 export async function getSessionEvents(req: Request, res: Response): Promise<void> {
   const { sessionId } = req.params
@@ -35,6 +37,15 @@ export async function getSessionEvents(req: Request, res: Response): Promise<voi
     if (typeof sessionId !== 'string' || sessionId.trim().length === 0) {
       res.status(400).json({
         error: 'Invalid sessionId.',
+      })
+      return
+    }
+
+    const session = await Session.findOne({ sessionId }).exec()
+
+    if (!session) {
+      res.status(404).json({
+        error: 'Session not found.',
       })
       return
     }

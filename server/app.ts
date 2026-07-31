@@ -1,9 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express'
 import cors from 'cors'
 
-import sessionRouter from './routes/sessions.js'
-import eventRouter from './routes/events.js'
-
 /**
  * app.ts is intentionally separated from index.ts because the entry point is
  * responsible for infrastructure startup and shutdown. It connects MongoDB,
@@ -54,16 +51,6 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
   next()
 })
-
-app.get('/', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    service: 'Session Replay Backend',
-  })
-})
-
-app.use('/sessions', sessionRouter)
-app.use('/events', eventRouter)
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({

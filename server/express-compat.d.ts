@@ -17,6 +17,7 @@ declare module 'express' {
   export interface Application {
     use(...args: unknown[]): this
     get(path: string, handler: (req: Request, res: Response) => unknown): this
+    listen(port: number, callback?: () => void): import('http').Server
   }
 
   export interface RouterInterface {

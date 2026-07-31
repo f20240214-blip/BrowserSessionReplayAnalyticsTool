@@ -1,5 +1,10 @@
+import express from 'express'
+import type { Server } from 'http'
 import { connectMongoDB, disconnectMongoDB } from './mongodb.js'
 import { startWebSocketServer, stopWebSocketServer } from './websocket.js'
+import app from './app.js'
+import sessionRouter from './routes/sessions.js'
+import eventRouter from './routes/events.js'
 import 'dotenv/config'
 
 interface AppConfig {
@@ -34,6 +39,7 @@ function getConfig(): AppConfig {
 }
 
 let isShuttingDown = false
+let httpServer: Server | null = null
 
 /**
  * shutdown performs a graceful cleanup of infrastructure resources.
@@ -48,6 +54,24 @@ async function shutdown(): Promise<void> {
 
   isShuttingDown = true
   console.log('[SessionReplayServer] Shutting down...')
+
+  if (httpServer) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        httpServer!.close((error?: Error) => {
+          if (error) {
+            reject(error)
+            return
+          }
+
+          resolve()
+        })
+      })
+      console.log('[SessionReplayServer] HTTP server closed.')
+    } catch (error) {
+      console.error('[SessionReplayServer] Error stopping HTTP server.', error)
+    }
+  }
 
   try {
     await stopWebSocketServer()
@@ -78,8 +102,22 @@ async function bootstrap(): Promise<void> {
     await connectMongoDB(config.mongoUri)
     console.log('[SessionReplayServer] MongoDB connected.')
 
-    startWebSocketServer(config.port)
-    console.log(`[SessionReplayServer] WebSocket server listening on port ${config.port}.`)
+    app.use(express.json())
+    app.get('/health', (_req, res) => {
+      res.status(200).json({
+        status: 'ok',
+      })
+    })
+
+    app.use('/api/sessions', sessionRouter)
+    app.use('/api/events', eventRouter)
+
+    httpServer = app.listen(config.port, () => {
+      console.log(`[SessionReplayServer] HTTP server listening on port ${config.port}.`)
+    })
+
+    startWebSocketServer(config.port + 1)
+    console.log(`[SessionReplayServer] WebSocket server listening on port ${config.port + 1}.`)
 
     console.log('[SessionReplayServer] Ready to receive browser session events.')
   } catch (error) {

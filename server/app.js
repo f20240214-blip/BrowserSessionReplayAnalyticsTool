@@ -1,9 +1,7 @@
-import express, { type Request, type Response, type NextFunction } from 'express'
-import cors from 'cors'
-
-import sessionRouter from './routes/sessions.js'
-import eventRouter from './routes/events.js'
-
+import express, {} from 'express';
+import cors from 'cors';
+import sessionRouter from './routes/sessions.js';
+import eventRouter from './routes/events.js';
 /**
  * app.ts is intentionally separated from index.ts because the entry point is
  * responsible for infrastructure startup and shutdown. It connects MongoDB,
@@ -19,22 +17,17 @@ import eventRouter from './routes/events.js'
  * improves maintainability by ensuring one consistent request policy applies
  * across the API instead of repeating the same behavior in every route.
  */
-const app = express()
-
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
-app.use(
-  cors({
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
     origin: 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     // Credentials must be enabled when the browser needs to send cookies or
     // authentication-related cross-origin headers. Browsers will not include
     // those credentials unless the server explicitly allows them.
     credentials: true,
-  })
-)
-
+}));
 /**
  * The allowed origin is restricted to a single frontend origin instead of
  * using "*" because credentialed CORS requests require an explicit origin.
@@ -42,40 +35,31 @@ app.use(
  * the API to arbitrary web clients that could otherwise authenticate or send
  * cookies through the browser.
  */
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  const startedAt = Date.now()
-
-  _res.on('finish', () => {
-    const elapsed = Date.now() - startedAt
-    console.log(
-      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${_res.statusCode} (${elapsed}ms)`
-    )
-  })
-
-  next()
-})
-
-app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-  })
-})
-
-app.use('/api/sessions', sessionRouter)
-app.use('/api/events', eventRouter)
-
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Route not found',
-  })
-})
-
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('[Session Replay Backend] Unhandled application error:', err)
-
-  res.status(500).json({
-    error: 'Internal server error',
-  })
-})
-
-export default app
+app.use((req, _res, next) => {
+    const startedAt = Date.now();
+    _res.on('finish', () => {
+        const elapsed = Date.now() - startedAt;
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} -> ${_res.statusCode} (${elapsed}ms)`);
+    });
+    next();
+});
+app.get('/health', (_req, res) => {
+    res.status(200).json({
+        status: 'ok',
+    });
+});
+app.use('/api/sessions', sessionRouter);
+app.use('/api/events', eventRouter);
+app.use((_req, res) => {
+    res.status(404).json({
+        error: 'Route not found',
+    });
+});
+app.use((err, _req, res, _next) => {
+    console.error('[Session Replay Backend] Unhandled application error:', err);
+    res.status(500).json({
+        error: 'Internal server error',
+    });
+});
+export default app;
+//# sourceMappingURL=app.js.map

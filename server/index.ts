@@ -1,10 +1,7 @@
-import express from 'express'
 import type { Server } from 'http'
 import { connectMongoDB, disconnectMongoDB } from './mongodb.js'
 import { startWebSocketServer, stopWebSocketServer } from './websocket.js'
 import app from './app.js'
-import sessionRouter from './routes/sessions.js'
-import eventRouter from './routes/events.js'
 import 'dotenv/config'
 
 interface AppConfig {
@@ -101,16 +98,6 @@ async function bootstrap(): Promise<void> {
   try {
     await connectMongoDB(config.mongoUri)
     console.log('[SessionReplayServer] MongoDB connected.')
-
-    app.use(express.json())
-    app.get('/health', (_req, res) => {
-      res.status(200).json({
-        status: 'ok',
-      })
-    })
-
-    app.use('/api/sessions', sessionRouter)
-    app.use('/api/events', eventRouter)
 
     httpServer = app.listen(config.port, () => {
       console.log(`[SessionReplayServer] HTTP server listening on port ${config.port}.`)

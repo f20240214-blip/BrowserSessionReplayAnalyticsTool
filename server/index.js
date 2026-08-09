@@ -1,5 +1,6 @@
 import { connectMongoDB, disconnectMongoDB } from './mongodb.js';
 import { startWebSocketServer, stopWebSocketServer } from './websocket.js';
+import app from './app.js';
 import 'dotenv/config';
 /**
  * Load runtime configuration separately from startup so bootstrap() only
@@ -21,6 +22,7 @@ function getConfig() {
     };
 }
 let isShuttingDown = false;
+let httpServer = null;
 /**
  * shutdown performs a graceful cleanup of infrastructure resources.
  *
@@ -33,6 +35,23 @@ async function shutdown() {
     }
     isShuttingDown = true;
     console.log('[SessionReplayServer] Shutting down...');
+    if (httpServer) {
+        try {
+            await new Promise((resolve, reject) => {
+                httpServer.close((error) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+                    resolve();
+                });
+            });
+            console.log('[SessionReplayServer] HTTP server closed.');
+        }
+        catch (error) {
+            console.error('[SessionReplayServer] Error stopping HTTP server.', error);
+        }
+    }
     try {
         await stopWebSocketServer();
     }
@@ -58,8 +77,11 @@ async function bootstrap() {
     try {
         await connectMongoDB(config.mongoUri);
         console.log('[SessionReplayServer] MongoDB connected.');
-        startWebSocketServer(config.port);
-        console.log(`[SessionReplayServer] WebSocket server listening on port ${config.port}.`);
+        httpServer = app.listen(config.port, () => {
+            console.log(`[SessionReplayServer] HTTP server listening on port ${config.port}.`);
+        });
+        startWebSocketServer(config.port + 1);
+        console.log(`[SessionReplayServer] WebSocket server listening on port ${config.port + 1}.`);
         console.log('[SessionReplayServer] Ready to receive browser session events.');
     }
     catch (error) {

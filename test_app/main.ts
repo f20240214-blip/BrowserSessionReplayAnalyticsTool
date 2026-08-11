@@ -9,7 +9,7 @@ declare global {
 
 const recorder =
   new SessionRecorder({
-    endpoint: "ws://localhost:8080",
+    endpoint: "ws://localhost:8081",
     debug: true
   });
 

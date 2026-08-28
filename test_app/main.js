@@ -1,6 +1,6 @@
 import { SessionRecorder } from "../sdk/index.js";
 const recorder = new SessionRecorder({
-    endpoint: "ws://localhost:8080",
+    endpoint: "ws://localhost:8081",
     debug: true
 });
 // Expose the recorder on window for development and debugging only.

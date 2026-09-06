@@ -1,7 +1,7 @@
 import { get } from './client.js'
 import type { Session } from '../types/session.js'
 
-export async function getSessions(): Promise<Session[]> {
+export async function getSession(): Promise<Session[]> {
     return get<Session[]>('/api/sessions/')
 }
 

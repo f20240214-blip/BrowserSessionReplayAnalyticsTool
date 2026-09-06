@@ -1,6 +1,6 @@
 export interface Event {
   sessionId: string
-  timestamp: Date
+  timestamp: string
   type: string
   payload: unknown
 }

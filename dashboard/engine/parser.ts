@@ -10,10 +10,10 @@ function normalizeTimestamp(timestamp: unknown): number {
 		throw new Error('Replay event is missing a timestamp')
 	}
 
-	const numericTimestamp = Number(timestamp)
-	if (Number.isFinite(numericTimestamp)) {
-		return numericTimestamp
-	}
+	// const numericTimestamp = Number(timestamp)
+	// if (Number.isFinite(numericTimestamp)) {
+	// 	return numericTimestamp
+	// }
 
 	const parsedTimestamp = Date.parse(timestamp)
 	if (Number.isFinite(parsedTimestamp)) {

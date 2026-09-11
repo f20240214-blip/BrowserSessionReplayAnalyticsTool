@@ -25,12 +25,14 @@ function normalizeTimestamp(timestamp: unknown): number {
 
 export function parseReplaySession(
 	sessionId: string,
+	startTime: string,
 	events: Event[],
 ): ReplaySession {
 	try {
+		const sessionStartTimestamp = normalizeTimestamp(startTime)
 		const normalizedEvents: SessionEvent[] = events.map((event) => ({
 			type: event.type,
-			timestamp: normalizeTimestamp(event.timestamp),
+			timestamp: normalizeTimestamp(event.timestamp) - sessionStartTimestamp,
 			payload: event.payload,
 		}))
 
